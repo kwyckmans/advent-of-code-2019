@@ -9,41 +9,6 @@ LOCATIONS = {}
 LOCATIONS["first"] = {}
 LOCATIONS["second"] = {}
 
-
-class Location:
-    def __init__(self, x, y, steps):
-        self._x = x
-        self._y = y
-        self._steps = steps
-
-    @property
-    def x(self):
-        return self._x
-
-    @property
-    def y(self):
-        return self._y
-
-    @property
-    def steps(self):
-        return self._steps
-
-    def __eq__(self, other):
-        if isinstance(other, Location):
-            return self.x == other.x and self.y == other.y
-
-        return NotImplemented
-
-    def __str__(self):
-        return f"({self.x}, {self.y} after {self.steps} steps)"
-
-    def __key(self):
-        return (self.x, self.y)
-
-    def __hash__(self):
-        return hash(self.__key())
-
-
 def manhattan_distance(location):
     return abs(location[0] - 1) + abs(location[1] - 1)
 

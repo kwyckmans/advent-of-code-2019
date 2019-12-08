@@ -33,14 +33,15 @@ class Processor:
 
     @property
     def has_next(self):
+        '''Indicates if the end of the program is reached or if the stop code flag is set
+        '''
         return not self._stop_code and self._pc < len(self._memory)
 
     def step(self):
         '''Take one step in the processing of a loaded program.
-        
-        TODO: WIP: this is just some jumbled together code. Does not actually work yet.
         '''
-        # if self._pc < len(self._memory):
+        # TODO Add check to see if end is reached and throw exception
+
         op_code = self._memory[self._pc]
 
         if op_code == 99:
@@ -51,20 +52,12 @@ class Processor:
         params["a"] = self._memory[self._pc + 1]
         params["b"] = self._memory[self._pc + 2]
         loc = self._memory[self._pc + 3]
-
         
         self._memory[loc] = operations[op_code](**params)
-        
-        # if op_code == 1:
-        #     program[loc] = program[a] + program[b]
-        # elif op_code == 2:
-        #     program[loc] = program[a] * program[b]
-        # else:
-        #     raise Exception("Unknown opcode")
-        
+
+        print(f"PC at {self._pc}. Op code: {op_code} - A {params['a']} - B {params['b']} - loc {loc} - result {self._memory[loc]}")
         self._pc += 4
 
-        # return True
 
     def process(self, program):
         self._memory = program[:]
@@ -88,7 +81,11 @@ class Processor:
 
             instruction_pointer += 4
 
+    def __getitem__(self, key):
+        return self._memory[key]
 
+    def __setitem__(self, key, value):
+        self._memory[key] = value
 
 class OpCode:
     def __init__(self, operation: str):

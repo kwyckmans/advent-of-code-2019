@@ -81,7 +81,7 @@ def plot_wire(directions, wire, marker="x"):
 
 
 if __name__ == "__main__":
-    with open("day-three.txt", "r") as f:
+    with open("day3/day-three.txt", "r") as f:
         WIRES = [line for line in f]
 
     print(f"Processing instructions: {WIRES[0]}")

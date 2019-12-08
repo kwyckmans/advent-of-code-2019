@@ -1,3 +1,8 @@
+import sys
+sys.path.append('.')
+
+from intcode.intcode import Processor
+
 PROGRAM = [
     1,
     12,
@@ -148,18 +153,16 @@ def process(program):
 
 if __name__ == "__main__":
     memory = PROGRAM[:]
-    
-    process(memory)
-    print(f"Result: {memory[0]}")
-    print(f"Validate: {PROGRAM[0]}")
+    proc = Processor(memory)
 
     for noun in range(0,100):
         for verb in range(0,100):
             memory = PROGRAM[:]
             memory[1] = noun
             memory[2] = verb
-            process(memory)
 
-            if memory[0] == 19690720:
+            proc.process(memory)
+            
+            if proc._memory[0] == 19690720:
                 print(f"noun: {noun} , verb: {verb}, answer: {100 * noun + verb}")
                 break

@@ -12,7 +12,7 @@ if __name__ == "__main__":
     assert calculate_fuel(1969) == 966
     assert calculate_fuel(100756) == 50346
 
-    with open("day-one.txt", "r") as f:
+    with open("day1/day-one.txt", "r") as f:
         vals = [int(line) for line in f]
     
     print(f"Part one: {sum(map(lambda i: (i//3) - 2, vals))}")

@@ -3,6 +3,9 @@ from typing import List
 MEMORY = [2]
 
 
+
+
+
 class Processor:
     # MEMORY = []
 
@@ -22,6 +25,11 @@ class Processor:
         self.operations[7] = [self.less_than, 4]
         self.operations[8] = [self.equals, 4]
 
+        self.wait_for_input = False
+
+        self.output = []
+        self.input = []
+
     def reset(self):
         self._stop_code = False
         self._pc = 0
@@ -32,32 +40,56 @@ class Processor:
         """
         return not self._stop_code and self._pc < len(self._memory)
 
-    def step(self):
-        """Take one step in the processing of a loaded program.
-        """
-        op_code = Opcode(str(MEMORY[self._pc]))
+    def step_local_mem(self):
+        op_code = Opcode(str(self._memory[self._pc]), self._memory)
 
         if op_code.is_halt_code():
             self._stop_code = True
             return
 
-        args = MEMORY[self._pc + 1 : self._pc + op_code.param_count]
+        args = self._memory[self._pc + 1 : self._pc + op_code.param_count]
         params = op_code.get_params(args)
         print(
             f"PC at {self._pc}. Op code: {op_code} - arguments {args} - params {params}"
         )
 
-        pc_modified = self.operations[op_code._opcode][0](**params)
+        if not self.wait_for_input:
+            pc_modified = self.operations[op_code._opcode][0](**params)
 
-        if not pc_modified:
-            self._pc += op_code.param_count
+            if not pc_modified:
+                self._pc += op_code.param_count
 
         print(f"Next PC {self._pc}")
 
+
+    # def step(self):
+    #     """Take one step in the processing of a loaded program.
+    #     """
+
+    #     op_code = Opcode(str(MEMORY[self._pc]))
+
+    #     if op_code.is_halt_code():
+    #         self._stop_code = True
+    #         return
+
+    #     args = MEMORY[self._pc + 1 : self._pc + op_code.param_count]
+    #     params = op_code.get_params(args)
+    #     print(
+    #         f"PC at {self._pc}. Op code: {op_code} - arguments {args} - params {params}"
+    #     )
+
+    #     if not self.wait_for_input:
+    #         pc_modified = self.operations[op_code._opcode][0](**params)
+
+    #         if not pc_modified:
+    #             self._pc += op_code.param_count
+
+    #     print(f"Next PC {self._pc}")
+
     def process(self):
-        print(f"Instructions in memoery: {len(MEMORY)}")
-        while not self._stop_code and self._pc < len(MEMORY):
-            self.step()
+        print(f"Instructions in memoery: {len(self._memory)}")
+        while not self._stop_code and self._pc < len(self._memory) and not self.wait_for_input:
+            self.step_local_mem()
 
     def __getitem__(self, key):
         return self._memory[key]
@@ -66,16 +98,22 @@ class Processor:
         self._memory[key] = value
 
     def multiply(self, a: int, b: int, loc: int):
-        MEMORY[loc] = a * b
+        self._memory[loc] = a * b
 
     def add(self, a: int, b: int, loc: int):
-        MEMORY[loc] = a + b
+        self._memory[loc] = a + b
 
     def store(self, loc: int):
-        val = int(input("Please enter a value: "))
-        MEMORY[loc] = val
+        # val = int(input())        
+        if not self.input:
+            self.wait_for_input = True
+        else:
+            val = self.input.pop(0)
+            print(f"read {val} from input queue")
+            self._memory[loc] = val
 
     def out(self, loc: int):
+        self.output.append(loc)
         print(f"- - - OUTPUT: {loc} - - -")
 
     def jump_if_false(self, a, b):
@@ -116,7 +154,8 @@ class Instruction:
 class Opcode:
     PARAM_FOR_OP = {1: 4, 2: 4, 3: 2, 4: 2, 5: 3, 6: 3, 7: 4, 8: 4, 99: 0}
 
-    def __init__(self, operation: str):
+    def __init__(self, operation: str, memory: List):
+        self._memory = memory
         mode, op = operation[:-2], operation[-2:]
         self._opcode = int(op)
 
@@ -145,12 +184,12 @@ class Opcode:
             or self._opcode == 8
         ):
             if self._modes[2] == "0":
-                params["a"] = MEMORY[args[0]]
+                params["a"] = self._memory[args[0]]
             else:
                 params["a"] = args[0]
 
             if self._modes[1] == "0":
-                params["b"] = MEMORY[args[1]]
+                params["b"] = self._memory[args[1]]
             else:
                 params["b"] = args[1]
 
@@ -164,49 +203,79 @@ class Opcode:
         if self._opcode == 4:
             if self._modes[2] == "0":
                 print(
-                    f"opcode 4 in positional mode, with argument {args[0]}, memory contains {MEMORY[args[0]]}"
+                    f"opcode 4 in positional mode, with argument {args[0]}, memory contains {self._memory[args[0]]}"
                 )
-                return {"loc": MEMORY[args[0]]}
+                return {"loc": self._memory[args[0]]}
             else:
                 return {"loc": args[0]}
 
         if self._opcode == 5 or self._opcode == 6:
             if self._modes[2] == "0":
-                params["a"] =  MEMORY[args[0]]
+                params["a"] =  self._memory[args[0]]
             else:
                 params["a"] = args[0]
             
             if self._modes[1] == "0":
-                params["b"] =  MEMORY[args[1]]
+                params["b"] =  self._memory[args[1]]
             else:
                 params["b"] = args[1]
             
             return params
-            
+
+class Amplifier(Processor):
+    def __init__(self, next: "Amplifier", phase: int):
+        super().__init__([])
+        self.next = next
+        self.input.append(phase)
+    
+    def process_pipeline(self):
+        if not self._stop_code:
+            self.process()
+
+            if self.wait_for_input:
+                self.next.process()
+
+    def out(self, loc:int):
+        self.output.append(loc)
+        self.next.input.append(loc)
+        
+def test_amplifiers():
+    print("- - - TESTING AMPLIFIERS - - - ")
+    A = Amplifier(None, 1)
+    B = Amplifier(A, 2)
+    A.next = B
+
+    program = [3,3,0,0,3,3,99,0]
+
+    # THIS IS A PROBLEM, IT WILL USE THE SHARED MEMORY :(
+    global MEMORY 
+    MEMORY = program[:]
+
+    A.process_pipeline()
 
 if __name__ == "__main__":
     print(" - - - - opcodes - - - -")
-    op = Opcode("1")
-    print(op._opcode, op._modes)
-    op = Opcode("2")
-    print(op._opcode, op._modes)
-    op = Opcode("02")
-    print(op._opcode, op._modes)
-    op = Opcode("1103")
-    print(op._opcode, op._modes)
+    # op = Opcode("1")
+    # print(op._opcode, op._modes)
+    # op = Opcode("2")
+    # print(op._opcode, op._modes)
+    # op = Opcode("02")
+    # print(op._opcode, op._modes)
+    # op = Opcode("1103")
+    # print(op._opcode, op._modes)
 
-    op = Opcode("1002")
-    print(op._opcode, op._modes)
+    # op = Opcode("1002")
+    # print(op._opcode, op._modes)
 
-    op = Opcode("104")
-    print(op._opcode, op._modes)
+    # op = Opcode("104")
+    # print(op._opcode, op._modes)
     # test_program = [11101, 5, 5, 0, 11101, 10, 2, 0, 3, 5, 4, 5, 99]
     # MEMORY = test_program[:]
-    proc = Processor([])
+    proc = Processor([11101, 5, 5, 0, 11101, 10, 2, 0, 3, 5, 4, 5, 99])
 
     print(f"Starting at {proc._pc}")
-
-    # proc.process()
+    proc.input.append(2)
+    proc.process()
 
     # MEMORY = [1002, 4, 3, 4, 33]
     # proc = Processor([])
@@ -243,36 +312,38 @@ if __name__ == "__main__":
     # MEMORY = [3, 3, 1107, -1, 8, 3, 4, 3, 99]
     # proc.process()
 
-    MEMORY = [
-        3, 21,
-        1008, 21, 8, 20,
-        1005, 20, 22,
-        107, 8, 21, 20,
-        1006, 20, 31, 
-        1106, 0, 36,
-        98, 0, 0, 1002,
-        21, 125, 20, 4,
-        20,
-        1105,
-        1,
-        46,
-        104,
-        999,
-        1105,
-        1,
-        46,
-        1101,
-        1000,
-        1,
-        20,
-        4,
-        20,
-        1105,
-        1,
-        46,
-        98,
-        99,
-    ]
-    print("Larger test: 999 if < 8, 1000 if = 8, 1001 if > 8")
-    proc.reset()
-    proc.process()
+    # MEMORY = [
+    #     3, 21,
+    #     1008, 21, 8, 20,
+    #     1005, 20, 22,
+    #     107, 8, 21, 20,
+    #     1006, 20, 31, 
+    #     1106, 0, 36,
+    #     98, 0, 0, 1002,
+    #     21, 125, 20, 4,
+    #     20,
+    #     1105,
+    #     1,
+    #     46,
+    #     104,
+    #     999,
+    #     1105,
+    #     1,
+    #     46,
+    #     1101,
+    #     1000,
+    #     1,
+    #     20,
+    #     4,
+    #     20,
+    #     1105,
+    #     1,
+    #     46,
+    #     98,
+    #     99,
+    # ]
+    # print("Larger test: 999 if < 8, 1000 if = 8, 1001 if > 8")
+    # proc.reset()
+    # proc.process()
+
+    # test_amplifiers()

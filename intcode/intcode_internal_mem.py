@@ -107,8 +107,8 @@ class Processor:
     def store(self, loc: int):
         # val = int(input())        
         if not self.input:
+            print(f"Waiting for inputs...")
             self.wait_for_input = True
-            print(f"Waiting for input")
         else:
             val = self.input.pop(0)
             print(f"read {val} from input queue")
@@ -168,7 +168,6 @@ class Opcode:
         else:
             self._modes = "000"
 
-        print(f"Getting param count for {self._opcode}")
         self.param_count = Opcode.PARAM_FOR_OP[self._opcode]
 
     def is_halt_code(self):
@@ -228,20 +227,18 @@ class Opcode:
             return params
 
 class Amplifier(Processor):
-    def __init__(self, name, program: List, next_proc: "Amplifier", phase: int):
+    def __init__(self, name: str, program: List, next: "Amplifier", phase: int):
         super().__init__(program)
-        self.next = next_proc
+        self.next = next
         self.input.append(phase)
-        self.operations[4] = [self.out, 2]
         self._name = name
 
-        print(f"Set up amplifier {self._name}. Next one is {self.next._name if self.next else None}")
-    
     def process_pipeline(self):
         if not self._stop_code:
             self.process()
 
             if self.wait_for_input:
+                print(f"Giving control to {self.next._name}")
                 self.next.process()
 
     def out(self, loc:int):
@@ -252,15 +249,8 @@ class Amplifier(Processor):
         
 def test_amplifiers():
     print("- - - TESTING AMPLIFIERS - - - ")
-    program = [3,26,
-    1001,26,-4,26,
-    3,27,
-    1002,27,2,27,
-    1,27,26,27,
-    4,27,
-    1001,28,-1,28,
-    1005,28,6,
-    99,0,0,5]
+    program = [3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,
+27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5]
 
     E = Amplifier("E", program, None, 5)
     D = Amplifier("D", program, E, 6)
@@ -272,8 +262,8 @@ def test_amplifiers():
 
     A.input.append(0)
     A.process_pipeline()
-    print(A.output)
-    
+    print(A.output.pop())
+
 if __name__ == "__main__":
     print(" - - - - opcodes - - - -")
     # op = Opcode("1")

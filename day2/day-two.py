@@ -2,6 +2,7 @@ import sys
 sys.path.append('.')
 
 from intcode.intcode import Processor
+# import intcode.intcode as intprocessor
 
 PROGRAM = [
     1,
@@ -153,16 +154,27 @@ def process(program):
 
 if __name__ == "__main__":
     memory = PROGRAM[:]
-    proc = Processor(memory)
+
 
     for noun in range(0,100):
         for verb in range(0,100):
-            memory = PROGRAM[:]
-            memory[1] = noun
-            memory[2] = verb
+            # intprocessor.MEMORY = PROGRAM[:]
 
-            proc.process(memory)
+            proc = Processor(PROGRAM)
+            # intprocessor.MEMORY[1] = noun
+            # intprocessor.MEMORY[2] = verb
+            proc._memory[1] = noun
+            proc._memory[2] = verb
+
+            proc.process()
             
-            if proc._memory[0] == 19690720:
+            if proc[0] < 20000000:
+                print(f"testing {noun}, {verb}: {proc[0]}")
+
+            if proc[0] == 19690720:
                 print(f"noun: {noun} , verb: {verb}, answer: {100 * noun + verb}")
                 break
+            
+        if proc[0] == 19690720:
+            print(f"noun: {noun} , verb: {verb}, answer: {100 * noun + verb}")
+            break
